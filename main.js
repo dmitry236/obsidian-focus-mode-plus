@@ -309,3 +309,46 @@ class FocusTimer {
         this.updateDisplay("⏱️ Фокус не активен");
     }
 }
+
+class FocusStats {
+    constructor() {
+        this.data = [];
+        this.achievements = {};
+    }
+    
+    load(data) {
+        if (data) {
+            this.data = data.data || [];
+            this.achievements = data.achievements || {};
+        }
+    }
+    
+    save() {
+        return { data: this.data, achievements: this.achievements };
+    }
+    
+    addSession(session) {
+        const today = new Date().toISOString().split('T')[0];
+        let dayStat = this.data.find(d => d.date === today);
+        if (!dayStat) {
+            dayStat = { date: today, totalFocusSeconds: 0, sessions: [], avgSessionLength: 0 };
+            this.data.push(dayStat);
+        }
+        dayStat.sessions.push(session);
+        dayStat.totalFocusSeconds += session.durationSeconds;
+        dayStat.avgSessionLength = dayStat.totalFocusSeconds / dayStat.sessions.length;
+        if (this.data.length > 90) this.data.shift();
+    }
+    
+    getTotalMinutes() {
+        return this.data.reduce((sum, d) => sum + d.totalFocusSeconds, 0) / 60;
+    }
+    
+    getTotalSessions() {
+        return this.data.reduce((sum, d) => sum + d.sessions.length, 0);
+    }
+    
+    getCompletedSessions() {
+        return this.data.reduce((sum, d) => sum + d.sessions.filter(s => s.completed).length, 0);
+    }
+}
