@@ -12,7 +12,7 @@ const DEFAULT_SETTINGS = {
 };
 
 module.exports = class FocusModePlus extends Plugin {
-async startFocusSession(customMinutes) {
+    async startFocusSession(customMinutes) {
         if (this.isFocusActive) return;
         
         const minutes = customMinutes || this.settings.defaultFocusMinutes;
@@ -38,7 +38,7 @@ async startFocusSession(customMinutes) {
         }
     }
 
-async endFocusSession(completed) {
+    async endFocusSession(completed) {
         if (!this.isFocusActive) return;
         
         const duration = this.currentSessionStart ? (Date.now() - this.currentSessionStart) / 1000 : 0;
@@ -81,7 +81,7 @@ async endFocusSession(completed) {
         new Notice(completed ? "Фокус-сессия завершена! Хорошая работа ✨" : "Режим фокуса ВЫКЛЮЧЕН");
     }
     
-async toggleFocusMode() {
+    async toggleFocusMode() {
         if (this.isFocusActive) {
             await this.endFocusSession(false);
         } else {
@@ -89,6 +89,132 @@ async toggleFocusMode() {
         }
     }
 
+    async onload() {
+        console.log("Загрузка Focus Mode+...");
+        
+        this.stats = new FocusStats();
+        await this.loadSettings();
+        
+        this.isFocusActive = false;
+        this.currentSessionStart = null;
+        this.originalSidebarState = null;
+        
+        // Инициализация блокировщика уведомлений
+        this.notificationBlocker = new NotificationBlocker();
+        this.notificationBlocker.setSettings(this.settings);
+        
+        // Создаём кнопки
+        if (this.settings.showRibbonButtons) {
+            this.createRibbonButtons();
+        }
+        
+        // Статус-бар для таймера
+        const statusBar = this.addStatusBarItem();
+        statusBar.style.marginRight = "10px";
+        this.timer = new FocusTimer(statusBar, () => this.endFocusSession(true));
+        
+        // Команды
+        this.addCommand({
+            id: 'toggle-focus-mode',
+            name: 'Включить/выключить режим фокуса',
+            callback: () => this.toggleFocusMode()
+        });
+        
+        this.addCommand({
+            id: 'show-focus-stats',
+            name: 'Показать статистику',
+            callback: () => new StatsModal(this.app, this.stats).open()
+        });
+        
+        this.addCommand({
+            id: 'show-recommendations',
+            name: 'Показать рекомендации',
+            callback: () => new RecommendationsModal(this.app, this.stats).open()
+        });
+        
+        this.addSettingTab(new FocusSettingTab(this.app, this));
+        
+        const newAchievements = this.stats.checkAchievements();
+        for (const ach of newAchievements) {
+            new Notice(`🏆 Новое достижение: ${ach.name}!`);
+        }
+        
+        this.registerEvent(this.app.workspace.on('quit', () => this.saveStats()));
+        console.log("Focus Mode+ загружен!");
+    }
+    
+    createRibbonButtons() {
+        const ribbonContainer = document.createElement('div');
+        ribbonContainer.style.display = 'flex';
+        ribbonContainer.style.flexDirection = 'column';
+        ribbonContainer.style.gap = '8px';
+        ribbonContainer.style.padding = '8px 0';
+        
+        this.focusBtn = ribbonContainer.createEl('button', { text: '🎯' });
+        this.focusBtn.style.cssText = `
+            background: var(--interactive-accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0 8px;
+            transition: all 0.2s;
+        `;
+        this.focusBtn.onclick = () => this.toggleFocusMode();
+        
+        const statsBtn = ribbonContainer.createEl('button', { text: '📊' });
+        statsBtn.style.cssText = `
+            background: var(--background-secondary);
+            border: 1px solid var(--background-modifier-border);
+            border-radius: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 0 8px;
+            transition: all 0.2s;
+        `;
+        statsBtn.onclick = () => new StatsModal(this.app, this.stats).open();
+        
+        const recBtn = ribbonContainer.createEl('button', { text: '💡' });
+        recBtn.style.cssText = `
+            background: var(--background-secondary);
+            border: 1px solid var(--background-modifier-border);
+            border-radius: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 0 8px;
+            transition: all 0.2s;
+        `;
+        recBtn.onclick = () => new RecommendationsModal(this.app, this.stats).open();
+        
+        const ribbon = document.querySelector('.workspace-ribbon.mod-left .sidebar-toggle-button');
+        if (ribbon && ribbon.parentNode) {
+            ribbon.parentNode.insertBefore(ribbonContainer, ribbon.nextSibling);
+            this.ribbonContainer = ribbonContainer;
+        } else {
+            const fallbackContainer = this.addStatusBarItem();
+            fallbackContainer.style.gap = '8px';
+            fallbackContainer.appendChild(this.focusBtn);
+            fallbackContainer.appendChild(statsBtn);
+            fallbackContainer.appendChild(recBtn);
+        }
+    }
+    
+    updateFocusButton() {
+        if (this.focusBtn) {
+            if (this.isFocusActive) {
+                this.focusBtn.textContent = '⏹️';
+                this.focusBtn.style.background = 'var(--background-modifier-error)';
+            } else {
+                this.focusBtn.textContent = '🎯';
+                this.focusBtn.style.background = 'var(--interactive-accent)';
+            }
+        }
+    }
 }
 class FocusTimer {
     constructor(statusBar, onComplete) {
