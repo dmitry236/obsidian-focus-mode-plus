@@ -351,4 +351,105 @@ class FocusStats {
     getCompletedSessions() {
         return this.data.reduce((sum, d) => sum + d.sessions.filter(s => s.completed).length, 0);
     }
+
+    getStreak() {
+        let streak = 0;
+        const today = new Date().toISOString().split('T')[0];
+        for (let i = this.data.length - 1; i >= 0; i--) {
+            const date = this.data[i].date;
+            const diff = (new Date(today) - new Date(date)) / (1000 * 60 * 60 * 24);
+            if (diff <= streak + 1 && this.data[i].sessions.length > 0) {
+                streak++;
+            } else if (diff > streak + 1) {
+                break;
+            }
+        }
+        return streak;
+    }
+    
+    getEarlySessions() {
+        let count = 0;
+        for (const day of this.data) {
+            for (const session of day.sessions) {
+                const hour = new Date(session.startTime).getHours();
+                if (hour < 9) count++;
+            }
+        }
+        return count;
+    }
+    
+    getLateSessions() {
+        let count = 0;
+        for (const day of this.data) {
+            for (const session of day.sessions) {
+                const hour = new Date(session.startTime).getHours();
+                if (hour >= 22) count++;
+            }
+        }
+        return count;
+    }
+    
+    getPomodoroCount() {
+        let count = 0;
+        for (const day of this.data) {
+            for (const session of day.sessions) {
+                if (Math.abs(session.durationSeconds - 1500) < 60) count++;
+            }
+        }
+        return count;
+    }
+    
+    getCurrentLevel() {
+        const totalMinutes = this.getTotalMinutes();
+        for (let i = PRODUCTIVITY_LEVELS.length - 1; i >= 0; i--) {
+            if (totalMinutes >= PRODUCTIVITY_LEVELS[i].minMinutes) {
+                return PRODUCTIVITY_LEVELS[i];
+            }
+        }
+        return PRODUCTIVITY_LEVELS[0];
+    }
+    
+    getNextLevel() {
+        const current = this.getCurrentLevel();
+        const currentIndex = PRODUCTIVITY_LEVELS.findIndex(l => l.name === current.name);
+        if (currentIndex < PRODUCTIVITY_LEVELS.length - 1) {
+            return PRODUCTIVITY_LEVELS[currentIndex + 1];
+        }
+        return null;
+    }
+    
+    getProgressToNextLevel() {
+        const current = this.getCurrentLevel();
+        const next = this.getNextLevel();
+        if (!next) return 100;
+        const totalMinutes = this.getTotalMinutes();
+        const progress = ((totalMinutes - current.minMinutes) / (next.minMinutes - current.minMinutes)) * 100;
+        return Math.min(100, Math.max(0, progress));
+    }
+    
+    checkAchievements() {
+        const newAchievements = [];
+        for (const ach of ACHIEVEMENTS) {
+            if (!this.achievements[ach.id] && ach.condition(this)) {
+                this.achievements[ach.id] = {
+                    unlocked: true,
+                    date: new Date().toISOString(),
+                    name: ach.name,
+                    description: ach.description
+                };
+                newAchievements.push(ach);
+            }
+        }
+        return newAchievements;
+    }
+    
+    getUnlockedAchievements() {
+        return Object.values(this.achievements);
+    }
+    
+    getBestDay() {
+        if (!this.data.length) return null;
+        const best = this.data.reduce((max, d) => d.totalFocusSeconds > max.totalFocusSeconds ? d : max, this.data[0]);
+        return { date: best.date, minutes: Math.round(best.totalFocusSeconds / 60) };
+    }
 }
