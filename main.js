@@ -11,6 +11,24 @@ const DEFAULT_SETTINGS = {
     collectAnalytics: true,
 };
 
+const PRODUCTIVITY_LEVELS = [
+    { name: "🌱 Начинающий", minMinutes: 0, maxMinutes: 30, icon: "🌱", color: "#9e9e9e", description: "Каждое большое путешествие начинается с первого шага!" },
+    { name: "⚡ В движении", minMinutes: 30, maxMinutes: 90, icon: "⚡", color: "#4caf50", description: "Вы набираете обороты!" },
+    { name: "🔥 В зоне", minMinutes: 90, maxMinutes: 180, icon: "🔥", color: "#ff9800", description: "Отличный темп! Так держать!" },
+    { name: "💪 Мастер фокуса", minMinutes: 180, maxMinutes: 300, icon: "💪", color: "#2196f3", description: "Вы в топе по концентрации!" },
+    { name: "🏆 Легенда", minMinutes: 300, maxMinutes: Infinity, icon: "🏆", color: "#ffd700", description: "Вы достигли статуса легенды продуктивности!" }
+];
+
+const ACHIEVEMENTS = [
+    { id: "first_focus", name: "🎯 Первый шаг", description: "Провести первую фокус-сессию", condition: (stats) => stats.getTotalSessions() >= 1 },
+    { id: "seven_days", name: "📅 7 дней подряд", description: "Фокусироваться 7 дней подряд", condition: (stats) => stats.getStreak() >= 7 },
+    { id: "marathon", name: "🏃 Марафонец", description: "Набрать 10 часов фокуса суммарно", condition: (stats) => stats.getTotalMinutes() >= 600 },
+    { id: "early_bird", name: "🌅 Ранняя пташка", description: "10 сессий до 9 утра", condition: (stats) => stats.getEarlySessions() >= 10 },
+    { id: "night_owl", name: "🦉 Ночная сова", description: "10 сессий после 22:00", condition: (stats) => stats.getLateSessions() >= 10 },
+    { id: "perfectionist", name: "💎 Перфекционист", description: "Завершить 50 сессий без прерываний", condition: (stats) => stats.getCompletedSessions() >= 50 },
+    { id: "pomodoro_master", name: "🍅 Мастер помидора", description: "Провести 100 сессий по 25 минут", condition: (stats) => stats.getPomodoroCount() >= 100 }
+];
+
 module.exports = class FocusModePlus extends Plugin {
     async startFocusSession(customMinutes) {
         if (this.isFocusActive) return;
