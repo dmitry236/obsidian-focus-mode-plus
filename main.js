@@ -556,3 +556,121 @@ class StatsModal extends Modal {
         this.contentEl.empty();
     }
 }
+
+class NotificationBlocker {
+    constructor() {
+        this.originalNotify = null;
+        this.isActive = false;
+        this.blockedCount = 0;
+        this.allowedDomains = [
+            'obsidian.md',
+            'github.com',
+            'fonts.googleapis.com'
+        ];
+    }
+    
+    activate() {
+        if (this.isActive) return;
+        
+        // Сохраняем оригинальный метод Notice
+        if (typeof Notice !== 'undefined' && Notice.prototype.show) {
+            this.originalNotify = Notice.prototype.show;
+        }
+        
+        // Переопределяем глобальный Notice
+        window.originalNotice = window.Notice;
+        window.Notice = class BlockedNotice {
+            constructor(message, timeout) {
+                // Блокируем все уведомления кроме системных
+                if (message && !message.includes('фокус') && !message.includes('Фокус') && !message.includes('Статистика')) {
+                    console.log(`[Focus Mode] Уведомление заблокировано: ${message}`);
+                    return;
+                }
+                // Пропускаем только наши уведомления
+                return new window.originalNotice(message, timeout);
+            }
+        };
+        
+        // Блокируем HTML5 Notifications
+        if (this.settings?.blockSystemNotices && window.Notification) {
+            this.originalNotification = window.Notification;
+            window.Notification = class BlockedNotification {
+                constructor(title, options) {
+                    console.log(`[Focus Mode] HTML5 уведомление заблокировано: ${title}`);
+                    return this;
+                }
+                static requestPermission() {
+                    return Promise.resolve('denied');
+                }
+            };
+            window.Notification.permission = 'denied';
+        }
+        
+        // Добавляем CSS для скрытия уведомлений
+        const styleId = 'focus-mode-notification-blocker';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+                /* Скрываем стандартные уведомления Obsidian */
+                .notice-container .notice,
+                .mod-notice,
+                .notification,
+                [class*="notification"] {
+                    display: none !important;
+                    opacity: 0 !important;
+                    visibility: hidden !important;
+                }
+                
+                /* Скрываем плавающие подсказки */
+                .tooltip,
+                [class*="tooltip"] {
+                    display: none !important;
+                }
+                
+                /* Скрываем popup-уведомления */
+                .popover,
+                .modal-dialog {
+                    display: none !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        this.isActive = true;
+        console.log('[Focus Mode] Система блокировки уведомлений активирована');
+    }
+    
+    deactivate() {
+        if (!this.isActive) return;
+        
+        // Восстанавливаем оригинальный Notice
+        if (this.originalNotify) {
+            Notice.prototype.show = this.originalNotify;
+        }
+        
+        // Восстанавливаем глобальный Notice
+        if (window.originalNotice) {
+            window.Notice = window.originalNotice;
+        }
+        
+        // Восстанавливаем HTML5 Notifications
+        if (this.originalNotification) {
+            window.Notification = this.originalNotification;
+        }
+        
+        // Удаляем CSS стили
+        const style = document.getElementById('focus-mode-notification-blocker');
+        if (style) {
+            style.remove();
+        }
+        
+        this.isActive = false;
+        console.log(`[Focus Mode] Система блокировки уведомлений деактивирована. Заблокировано уведомлений: ${this.blockedCount}`);
+        this.blockedCount = 0;
+    }
+    
+    setSettings(settings) {
+        this.settings = settings;
+    }
+}
