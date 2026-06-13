@@ -1,0 +1,71 @@
+/* Прогресс-бар */
+.progress-bar {
+    background-color: var(--background-modifier-border);
+    border-radius: 10px;
+    height: 20px;
+    margin: 10px 0;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background-color: var(--interactive-accent);
+    height: 100%;
+    transition: width 0.3s;
+    border-radius: 10px;
+}
+
+/* Сетка статистики */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.stat-card {
+    background-color: var(--background-secondary);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Достижения */
+.achievements {
+    margin: 10px 0;
+}
+
+.achievement {
+    background: linear-gradient(135deg, var(--background-secondary), var(--background-primary));
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 6px;
+    border-left: 4px solid gold;
+}
+
+/* Рекомендации */
+.recommendations-list p {
+    background-color: var(--background-secondary);
+    padding: 10px;
+    border-radius: 8px;
+    margin: 8px 0;
+}
+
+.motivation {
+    text-align: center;
+    font-style: italic;
+    color: var(--text-accent);
+}
+
+/* Кнопки на риббоне при наведении */
+.focus-ribbon-play:hover {
+    color: #4caf50;
+}
+
+.focus-ribbon-stats:hover {
+    color: #2196f3;
+}
+
+.focus-ribbon-recommend:hover {
+    color: #ff9800;
+}
