@@ -744,3 +744,98 @@ class RecommendationsModal extends Modal {
         this.contentEl.empty();
     }
 }
+
+class FocusSettingTab extends PluginSettingTab {
+    constructor(app, plugin) {
+        super(app, plugin);
+        this.plugin = plugin;
+    }
+    
+    display() {
+        const { containerEl } = this;
+        containerEl.empty();
+        
+        containerEl.createEl("h2", { text: "🎯 Focus Mode+ Настройки" });
+        
+        // Секция: Уведомления
+        containerEl.createEl("h3", { text: "🔕 Блокировка уведомлений" });
+        
+        new Setting(containerEl)
+            .setName("Блокировать уведомления Obsidian")
+            .setDesc("Отключает  уведомления Obsidian")
+            .addToggle(t => t.setValue(this.plugin.settings.blockNotifications)
+                .onChange(async (val) => {
+                    this.plugin.settings.blockNotifications = val;
+                    await this.plugin.saveSettings();
+                }));
+        
+        new Setting(containerEl)
+            .setName("Блокировать системные уведомления ОС")
+            .setDesc("Требует перезагрузки")
+            .addToggle(t => t.setValue(this.plugin.settings.blockSystemNotices)
+                .onChange(async (val) => {
+                    this.plugin.settings.blockSystemNotices = val;
+                    await this.plugin.saveSettings();
+                }));
+        
+        containerEl.createEl("hr");
+        
+        // Секция: Интерфейс
+        containerEl.createEl("h3", { text: "🖥️ Время в режиме фокуса" });
+        
+        new Setting(containerEl)
+            .setName("Длительность фокуса (минуты)")
+            .addSlider(slider => slider
+                .setLimits(5, 120, 5)
+                .setValue(this.plugin.settings.defaultFocusMinutes)
+                .setDynamicTooltip()
+                .onChange(async (val) => {
+                    this.plugin.settings.defaultFocusMinutes = val;
+                    await this.plugin.saveSettings();
+                }));
+        
+        containerEl.createEl("hr");
+        
+        // Секция: UI-ограничения
+        containerEl.createEl("h3", { text: "🎨 Ограничения интерфейса в режиме фокуса" });
+        
+        new Setting(containerEl)
+            .setName("Скрывать боковые панели")
+            .setDesc("Автоматически сворачивать левую и правую панели")
+            .addToggle(t => t.setValue(this.plugin.settings.hideSidebars)
+                .onChange(async (val) => {
+                    this.plugin.settings.hideSidebars = val;
+                    await this.plugin.saveSettings();
+                }));
+        
+        
+        containerEl.createEl("hr");
+        
+        // Секция: Статистика
+        if (this.plugin.stats) {
+            const level = this.plugin.stats.getCurrentLevel();
+            const totalMinutes = this.plugin.stats.getTotalMinutes();
+            containerEl.createEl("h3", { text: `🏅 Ваш текущий уровень: ${level.name} ${level.icon}` });
+            containerEl.createEl("p", { text: `Всего минут фокуса: ${Math.round(totalMinutes)}` });
+            containerEl.createEl("p", { text: level.description, attr: { style: `color: ${level.color}` } });
+            
+            containerEl.createEl("hr");
+        }
+        
+        new Setting(containerEl)
+            .setName("Сбросить статистику")
+            .setDesc("ВНИМАНИЕ: это удалит все ваши данные")
+            .addButton(btn => btn
+                .setButtonText("Сбросить")
+                .setWarning()
+                .onClick(async () => {
+                    if (this.plugin.stats) {
+                        this.plugin.stats.data = [];
+                        this.plugin.stats.achievements = {};
+                        await this.plugin.saveStats();
+                        new Notice("Статистика сброшена");
+                        this.display();
+                    }
+                }));
+    }
+}
